@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  backend:
+    image: maven:3.9-eclipse-temurin-17
+    container_name: study-buddy-backend
+    working_dir: /app/backend
+    volumes:
+      - .:/app
+    ports:
+      - "8080:8080"
+    command: mvn spring-boot:run
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - h2
+
+  frontend:
+    image: node:18-alpine
+    container_name: study-buddy-frontend
+    working_dir: /app/frontend
+    volumes:
+      - .:/app
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev"
+
+  h2:
+    image: oscarfonts/h2:latest
+    container_name: study-buddy-h2
+    ports:
+      - "1521:1521"
+      - "81:81"
+    environment:
+      - H2_OPTIONS=-trace
+    volumes:
+      - h2-data:/opt/h2-data
+
+volumes:
+  h2-data:
+

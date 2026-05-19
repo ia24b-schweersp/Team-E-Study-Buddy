@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Buddy - Lernplattform</title>
+    <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="navbar-container">
+                <div class="navbar-brand">
+                    <h1>📚 Study Buddy</h1>
+                </div>
+                <ul class="nav-menu" id="navMenu">
+                    <li><a href="#" onclick="app.showLogin(); return false;">Login</a></li>
+                    <li><a href="#" onclick="app.showRegister(); return false;">Registrierung</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Messages Container -->
+        <div id="messageContainer" class="message-container"></div>
+
+        <!-- Main Content -->
+        <div class="container">
+            <!-- Login View -->
+            <div id="loginView" class="view active">
+                <div class="card">
+                    <h2>Login</h2>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label for="loginEmail">Email:</label>
+                            <input
+                                type="email"
+                                id="loginEmail"
+                                name="email"
+                                placeholder="deine@email.com"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword">Passwort:</label>
+                            <input
+                                type="password"
+                                id="loginPassword"
+                                name="password"
+                                placeholder="Dein Passwort"
+                                required
+                            >
+                        </div>
+                        <button type="submit" class="btn btn-primary">Anmelden</button>
+                        <p class="text-center">
+                            Noch kein Konto?
+                            <a href="#" onclick="app.showRegister(); return false;">Jetzt registrieren</a>
+                        </p>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Register View -->
+            <div id="registerView" class="view">
+                <div class="card">
+                    <h2>Registrierung</h2>
+                    <form id="registerForm">
+                        <div class="form-group">
+                            <label for="registerUsername">Benutzername:</label>
+                            <input
+                                type="text"
+                                id="registerUsername"
+                                name="username"
+                                placeholder="Dein Benutzername"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="registerEmail">Email:</label>
+                            <input
+                                type="email"
+                                id="registerEmail"
+                                name="email"
+                                placeholder="deine@email.com"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="registerPassword">Passwort:</label>
+                            <input
+                                type="password"
+                                id="registerPassword"
+                                name="password"
+                                placeholder="Min. 6 Zeichen"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="registerConfirmPassword">Passwort bestätigen:</label>
+                            <input
+                                type="password"
+                                id="registerConfirmPassword"
+                                name="confirmPassword"
+                                placeholder="Wiederhole das Passwort"
+                                required
+                            >
+                        </div>
+                        <button type="submit" class="btn btn-primary">Registrieren</button>
+                        <p class="text-center">
+                            Bereits registriert?
+                            <a href="#" onclick="app.showLogin(); return false;">Zum Login</a>
+                        </p>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Profile View -->
+            <div id="profileView" class="view">
+                <div class="card">
+                    <div class="profile-header">
+                        <h2>Mein Profil</h2>
+                        <button class="btn btn-secondary" onclick="app.logout()">Logout</button>
+                    </div>
+                    <form id="profileForm">
+                        <div class="form-group">
+                            <label for="profileFirstName">Vorname:</label>
+                            <input
+                                type="text"
+                                id="profileFirstName"
+                                name="firstName"
+                                placeholder="Dein Vorname"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="profileLastName">Nachname:</label>
+                            <input
+                                type="text"
+                                id="profileLastName"
+                                name="lastName"
+                                placeholder="Dein Nachname"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="profileBio">Kurzbio:</label>
+                            <textarea
+                                id="profileBio"
+                                name="bio"
+                                placeholder="Erzähl etwas über dich"
+                                rows="3"
+                            ></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="profileSchool">Schule/Universität:</label>
+                            <input
+                                type="text"
+                                id="profileSchool"
+                                name="schoolOrUniversity"
+                                placeholder="Deine Schule oder Universität"
+                            >
+                        </div>
+                        <button type="submit" class="btn btn-primary">Profil speichern</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
+
