@@ -39,9 +39,11 @@ public class Profile {
     @Column(length = 255)
     private String schoolOrUniversity;
 
+    @Builder.Default
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Builder.Default
     @Column(nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
 
@@ -50,4 +52,3 @@ public class Profile {
         updatedAt = LocalDateTime.now();
     }
 }
-
