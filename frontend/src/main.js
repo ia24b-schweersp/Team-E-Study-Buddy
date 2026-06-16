@@ -1,9 +1,14 @@
 import ApiService from './api.js';
+import MatchingModule from './matching.js';
+import DashboardModule from './dashboard.js';
 
 class App {
     constructor() {
         this.currentUser = null;
         this.isLoading = false;
+        this.ApiService = ApiService; // Mache ApiService verfügbar
+        this.matchingModule = new MatchingModule(this);
+        this.dashboardModule = new DashboardModule(this);
         this.init();
     }
 
@@ -47,7 +52,7 @@ class App {
         const savedUser = localStorage.getItem('currentUser');
         if (savedUser) {
             this.currentUser = JSON.parse(savedUser);
-            this.showProfile();
+            this.showDashboard();
             this.updateNavBar();
         }
     }
@@ -97,6 +102,21 @@ class App {
         }
     }
 
+    showDashboard() {
+        this.showView('dashboardView');
+        if (this.currentUser) {
+            this.dashboardModule.init();
+        }
+    }
+
+    showMatching() {
+        // Zeige einen zentralen Matching-View (optional)
+        if (this.currentUser) {
+            this.matchingModule.loadSuggestions();
+            this.matchingModule.loadAcceptedMatches();
+        }
+    }
+
     /**
      * Navigation Bar Update
      */
@@ -106,9 +126,21 @@ class App {
 
         if (this.currentUser) {
             navMenu.innerHTML = `
+                <li><a href="#" onclick="app.showDashboard(); return false;">Dashboard</a></li>
+                <li>
+                    <a href="#" onclick="app.showMatching(); return false;">
+                        🤝 Matches
+                        <span id="matchCountBadge" class="nav-badge" style="display: none;">0</span>
+                    </a>
+                </li>
                 <li><span class="username">👤 ${this.currentUser.username}</span></li>
                 <li><a href="#" onclick="app.logout(); return false;">Logout</a></li>
             `;
+
+            // Aktualisiere Match-Count Badge
+            if (this.matchingModule) {
+                this.matchingModule.updateMatchCount();
+            }
         } else {
             navMenu.innerHTML = `
                 <li><a href="#" onclick="app.showLogin(); return false;">Login</a></li>
@@ -155,7 +187,7 @@ class App {
                 };
                 this.saveSession();
                 this.showMessage(response.message, 'success');
-                this.showProfile();
+                this.showDashboard();
                 this.updateNavBar();
                 form.reset();
             } else {

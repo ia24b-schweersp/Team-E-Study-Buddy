@@ -99,6 +99,63 @@ class ApiService {
             method: 'GET'
         });
     }
+
+    /**
+     * Hole Match-Vorschläge
+     */
+    static async getMatchSuggestions(userId) {
+        return this.request(`/match/suggestions/${userId}`, {
+            method: 'GET'
+        });
+    }
+
+    /**
+     * Akzeptiere einen Match
+     */
+    static async acceptMatch(userId, suggestedUserId) {
+        return this.request('/match/accept', {
+            method: 'POST',
+            headers: {
+                'X-User-Id': userId
+            },
+            body: JSON.stringify({
+                suggestedUserId: suggestedUserId
+            })
+        });
+    }
+
+    /**
+     * Lehne einen Match ab
+     */
+    static async rejectMatch(userId, suggestedUserId) {
+        return this.request('/match/reject', {
+            method: 'POST',
+            headers: {
+                'X-User-Id': userId
+            },
+            body: JSON.stringify({
+                suggestedUserId: suggestedUserId
+            })
+        });
+    }
+
+    /**
+     * Hole akzeptierte Matches
+     */
+    static async getAcceptedMatches(userId) {
+        return this.request(`/match/accepted/${userId}`, {
+            method: 'GET'
+        });
+    }
+
+    /**
+     * Zähle Matches
+     */
+    static async countMatches(userId) {
+        return this.request(`/match/count/${userId}`, {
+            method: 'GET'
+        });
+    }
 }
 
 export default ApiService;
