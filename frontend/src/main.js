@@ -18,6 +18,11 @@ class App {
         document.getElementById('registerForm').addEventListener('submit', (e) => this.handleRegister(e));
         document.getElementById('profileForm').addEventListener('submit', (e) => this.handleProfileCreate(e));
 
+        document.querySelectorAll('.subject-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                button.classList.toggle('selected');
+            });
+        });
         // Session aus localStorage laden
         this.loadSession();
 
@@ -55,7 +60,7 @@ class App {
             this.showDashboard();
             this.updateNavBar();
         }
-    }
+        }
 
     saveSession() {
         if (this.currentUser) {
@@ -246,7 +251,10 @@ class App {
         const profileData = {
             firstName: form.elements['firstName'].value,
             lastName: form.elements['lastName'].value,
-            bio: form.elements['bio'].value,
+            subjects: Array.from(
+                document.querySelectorAll('.subject-btn.selected')
+            ).map(button => button.textContent)
+                .join(","),
             schoolOrUniversity: form.elements['schoolOrUniversity'].value
         };
 
@@ -275,7 +283,19 @@ class App {
             if (response.success) {
                 document.getElementById('profileFirstName').value = response.firstName || '';
                 document.getElementById('profileLastName').value = response.lastName || '';
-                document.getElementById('profileBio').value = response.bio || '';
+                document.querySelectorAll('.subject-btn').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+
+                if (response.subjects) {
+                    response.subjects.forEach(subject => {
+                        document.querySelectorAll('.subject-btn').forEach(btn => {
+                            if (btn.textContent === subject) {
+                                btn.classList.add('selected');
+                            }
+                        });
+                    });
+                }
                 document.getElementById('profileSchool').value = response.schoolOrUniversity || '';
             }
         } catch (error) {
@@ -288,6 +308,8 @@ class App {
 // Initialisiere App
 const app = new App();
 
-// Mache app global verfügbar für onclick-Handler in HTML
+// Mache app und Module global verfügbar für onclick-Handler in HTML
 window.app = app;
+window.matchingModule = app.matchingModule;
+window.dashboardModule = app.dashboardModule;
 

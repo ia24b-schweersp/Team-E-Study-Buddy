@@ -33,8 +33,8 @@ public class Profile {
     @Column(nullable = false)
     private String lastName;
 
-    @Column(length = 500)
-    private String bio;
+    @Column(length = 255)
+    private String subjects;
 
     @Column(length = 255)
     private String schoolOrUniversity;

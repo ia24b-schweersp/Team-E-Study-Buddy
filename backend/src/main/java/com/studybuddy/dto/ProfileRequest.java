@@ -18,7 +18,7 @@ public class ProfileRequest {
     @NotBlank(message = "Nachname ist erforderlich")
     private String lastName;
 
-    private String bio;
+    private String subjects;
 
     private String schoolOrUniversity;
 }

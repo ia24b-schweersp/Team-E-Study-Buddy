@@ -34,7 +34,7 @@ public class ProfileController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<ProfileResponse> getProfile(@PathVariable Long userId) {
+    public ResponseEntity<ProfileResponse>  getProfile(@PathVariable Long userId) {
         log.info("GET /api/profile/{} - Profil abrufen", userId);
         ProfileResponse response = profileService.getProfile(userId);
 

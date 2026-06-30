@@ -11,6 +11,7 @@ import com.studybuddy.repository.RejectedMatchRepository;
 import com.studybuddy.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
  * Service für Match- und Lernpartner-Management
  */
 @Service
+@Transactional
 public class MatchService {
 
     @Autowired
@@ -44,6 +46,10 @@ public class MatchService {
         Profile currentProfile = profileRepository.findByUserId(userId)
                 .orElse(null);
 
+        if (currentProfile == null) {
+            return new ArrayList<>(); // Leere Liste wenn kein Profil existiert
+        }
+
         // Hole alle anderen Nutzer mit Profilen
         List<User> allUsers = userRepository.findAll();
         List<MatchSuggestionDTO> suggestions = new ArrayList<>();
@@ -54,13 +60,19 @@ public class MatchService {
                 continue;
             }
 
-            // Prüfe ob bereits ein Match existiert
-            Optional<Match> existingMatch = matchRepository.findMatchBetweenUsers(userId, otherUser.getId());
-            if (existingMatch.isPresent()) {
-                continue;
+            // ✅ FIX: Prüfe ob der aktuelle Nutzer BEREITS AGIERT HAT
+            // Wenn ja, zeige diesen Nutzer nicht mehr in Vorschlägen
+            Optional<Match> userActedMatch = matchRepository.findMatchWhereCurrentUserActed(
+                    userId, otherUser.getId());
+            if (userActedMatch.isPresent()) {
+                Match match = userActedMatch.get();
+                // Zeige Nutzer nicht, wenn Status ACCEPTED oder REJECTED ist
+                if (match.getStatus().equals("ACCEPTED") || match.getStatus().equals("REJECTED")) {
+                    continue;
+                }
             }
 
-            // Prüfe ob dieser Nutzer bereits abgelehnt wurde
+            // Prüfe ob dieser Nutzer bereits als abgelehnt markiert wurde
             Optional<RejectedMatch> rejected = rejectedMatchRepository.findRejection(userId, otherUser.getId());
             if (rejected.isPresent()) {
                 continue;
@@ -70,8 +82,8 @@ public class MatchService {
             Profile otherProfile = profileRepository.findByUserId(otherUser.getId())
                     .orElse(null);
 
-            // Erstelle Vorschlag nur wenn beide Profile haben
-            if (otherProfile != null && currentProfile != null) {
+            // Erstelle Vorschlag nur wenn der andere auch ein Profil hat
+            if (otherProfile != null) {
                 int compatibilityScore = calculateCompatibility(currentProfile, otherProfile);
 
                 suggestions.add(MatchSuggestionDTO.builder()
@@ -79,7 +91,7 @@ public class MatchService {
                         .username(otherUser.getUsername())
                         .firstName(otherProfile.getFirstName())
                         .lastName(otherProfile.getLastName())
-                        .bio(otherProfile.getBio())
+                        .subjects(otherProfile.getSubjects())
                         .schoolOrUniversity(otherProfile.getSchoolOrUniversity())
                         .compatibilityScore(compatibilityScore)
                         .build());
@@ -108,12 +120,12 @@ public class MatchService {
         }
 
         // Prüfe auf Bio-Ähnlichkeit
-        if (profile1.getBio() != null && profile2.getBio() != null) {
-            String bio1 = profile1.getBio().toLowerCase();
-            String bio2 = profile2.getBio().toLowerCase();
+        if (profile1.getSubjects() != null && profile2.getSubjects() != null) {
+            String bio1 = profile1.getSubjects().toLowerCase();
+            String bio2 = profile2.getSubjects().toLowerCase();
 
             String[] keywords = {"mathe", "englisch", "deutsch", "physik", "chemie",
-                               "biologie", "informatik", "sprache", "lernen", "studium"};
+                               "biologie", "informatik", "spanisch", "wirtschaft", "finanz und rechnungswesen"};
 
             for (String keyword : keywords) {
                 if (bio1.contains(keyword) && bio2.contains(keyword)) {
@@ -186,13 +198,29 @@ public class MatchService {
         User suggestedUser = userRepository.findById(suggestedUserId)
                 .orElseThrow(() -> new RuntimeException("Vorgeschlagener Nutzer nicht gefunden"));
 
-        // Erstelle Ablehnung-Eintrag
-        RejectedMatch rejection = RejectedMatch.builder()
-                .user(user)
-                .rejectedUser(suggestedUser)
-                .build();
+        // Prüfe ob bereits ein Match existiert
+        Optional<Match> existingMatch = matchRepository.findMatchBetweenUsers(userId, suggestedUserId);
 
-        rejectedMatchRepository.save(rejection);
+        if (existingMatch.isPresent()) {
+            Match match = existingMatch.get();
+
+            // Aktualisiere rejection Status basierend auf aktuellem Nutzer
+            if (match.getUser1().getId().equals(userId)) {
+                match.setUser1Rejected(true);
+            } else {
+                match.setUser2Rejected(true);
+            }
+
+            matchRepository.save(match);
+        } else {
+            // Erstelle Ablehnung-Eintrag wenn kein Match existiert
+            RejectedMatch rejection = RejectedMatch.builder()
+                    .user(user)
+                    .rejectedUser(suggestedUser)
+                    .build();
+
+            rejectedMatchRepository.save(rejection);
+        }
 
         return Map.of(
                 "success", true,
@@ -219,7 +247,7 @@ public class MatchService {
                         "username", otherUser.getUsername(),
                         "firstName", otherProfile.getFirstName(),
                         "lastName", otherProfile.getLastName(),
-                        "bio", otherProfile.getBio() != null ? otherProfile.getBio() : "",
+                        "bio", otherProfile.getSubjects() != null ? otherProfile.getSubjects() : "",
                         "schoolOrUniversity", otherProfile.getSchoolOrUniversity() != null ?
                                             otherProfile.getSchoolOrUniversity() : "",
                         "matchId", match.getId()
@@ -235,6 +263,44 @@ public class MatchService {
      */
     public long countAcceptedMatches(Long userId) {
         return matchRepository.countAcceptedMatchesByUserId(userId);
+    }
+
+    /**
+     * ✅ NEUE METHODE: Erstelle Initial-Matches für einen neu erstellten Benutzer
+     * Dies stellt sicher, dass alle existierenden Benutzer den neuen Benutzer sehen
+     */
+    public void createInitialMatchesForNewProfile(Long newUserId) {
+        User newUser = userRepository.findById(newUserId)
+                .orElseThrow(() -> new RuntimeException("Benutzer nicht gefunden"));
+
+        // ✅ WICHTIG: Hole NUR Benutzer die AUCH ein PROFIL haben!
+        List<User> existingUsers = userRepository.findAll().stream()
+                .filter(u -> !u.getId().equals(newUserId))
+                .collect(Collectors.toList());
+
+        for (User otherUser : existingUsers) {
+            // Prüfe ob der andere Benutzer ein Profil hat
+            Optional<Profile> otherUserProfile = profileRepository.findByUserId(otherUser.getId());
+            if (otherUserProfile.isEmpty()) {
+                continue; // ✅ Überspringe User ohne Profil
+            }
+
+            // Prüfe ob bereits Match existiert
+            Optional<Match> existingMatch = matchRepository.findMatchBetweenUsers(newUserId, otherUser.getId());
+            if (existingMatch.isPresent()) {
+                continue;
+            }
+
+            // Erstelle neuen Match-Datensatz
+            Match newMatch = Match.builder()
+                    .user1(newUser)
+                    .user2(otherUser)
+                    .status("PENDING")
+                    .build();
+
+            matchRepository.save(newMatch);
+            matchRepository.flush();
+        }
     }
 }
 

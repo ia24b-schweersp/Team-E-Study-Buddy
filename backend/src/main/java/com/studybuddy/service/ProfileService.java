@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.Optional;
 
 @Service
@@ -21,7 +22,21 @@ public class ProfileService {
 
     private final ProfileRepository profileRepository;
     private final UserRepository userRepository;
+    private final MatchService matchService;
 
+    private String normalizeSubjects(String subjects) {
+        if (subjects == null || subjects.isBlank()) {
+            return "";
+        }
+
+        return Arrays.stream(subjects.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .reduce((a, b) -> a + "," + b)
+                .orElse("");
+    }
+
+    @Transactional
     public ProfileResponse createProfile(Long userId, ProfileRequest request) {
         log.info("Profil erstellen für Benutzer: {}", userId);
 
@@ -42,7 +57,7 @@ public class ProfileService {
             Profile profile = existingProfile.get();
             profile.setFirstName(request.getFirstName());
             profile.setLastName(request.getLastName());
-            profile.setBio(request.getBio());
+            profile.setSubjects(normalizeSubjects(request.getSubjects()));
             profile.setSchoolOrUniversity(request.getSchoolOrUniversity());
             Profile updatedProfile = profileRepository.save(profile);
 
@@ -53,7 +68,7 @@ public class ProfileService {
                     .userId(updatedProfile.getUser().getId())
                     .firstName(updatedProfile.getFirstName())
                     .lastName(updatedProfile.getLastName())
-                    .bio(updatedProfile.getBio())
+                    .subjects(updatedProfile.getSubjects())
                     .schoolOrUniversity(updatedProfile.getSchoolOrUniversity())
                     .message("Profil aktualisiert")
                     .success(true)
@@ -65,19 +80,32 @@ public class ProfileService {
                 .user(user)
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
-                .bio(request.getBio())
+                .subjects(normalizeSubjects(request.getSubjects()))
                 .schoolOrUniversity(request.getSchoolOrUniversity())
                 .build();
 
         Profile savedProfile = profileRepository.save(profile);
-        log.info("Profil erstellt für Benutzer: {}", userId);
+        profileRepository.flush(); // ✅ Stelle sicher dass das Profil in die DB geschrieben wird
+
+        log.info("Profil gespeichert für Benutzer: {}, jetzt erstelle Matches", userId);
+
+        // ✅ Erstelle Initial-Matches mit allen anderen Benutzern
+        try {
+            matchService.createInitialMatchesForNewProfile(userId);
+            log.info("Initial-Matches erfolgreich erstellt für neuen Benutzer: {}", userId);
+        } catch (Exception e) {
+            log.error("Fehler beim Erstellen von Initial-Matches für Benutzer: {}", userId, e);
+            throw new RuntimeException("Fehler beim Erstellen von Initial-Matches", e);
+        }
+
+        log.info("Profil erstellt und Matches initialisiert für Benutzer: {}", userId);
 
         return ProfileResponse.builder()
                 .id(savedProfile.getId())
                 .userId(savedProfile.getUser().getId())
                 .firstName(savedProfile.getFirstName())
                 .lastName(savedProfile.getLastName())
-                .bio(savedProfile.getBio())
+                .subjects(savedProfile.getSubjects())
                 .schoolOrUniversity(savedProfile.getSchoolOrUniversity())
                 .message("Profil erfolgreich erstellt")
                 .success(true)
@@ -103,7 +131,7 @@ public class ProfileService {
                 .userId(profile.getUser().getId())
                 .firstName(profile.getFirstName())
                 .lastName(profile.getLastName())
-                .bio(profile.getBio())
+                .subjects(profile.getSubjects())
                 .schoolOrUniversity(profile.getSchoolOrUniversity())
                 .success(true)
                 .build();

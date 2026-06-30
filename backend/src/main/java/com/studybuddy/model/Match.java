@@ -53,6 +53,18 @@ public class Match {
     @Builder.Default
     private Boolean user2Accepted = false;
 
+    /**
+     * Track ob user1 abgelehnt hat
+     */
+    @Builder.Default
+    private Boolean user1Rejected = false;
+
+    /**
+     * Track ob user2 abgelehnt hat
+     */
+    @Builder.Default
+    private Boolean user2Rejected = false;
+
     @Builder.Default
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -65,12 +77,33 @@ public class Match {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
 
-        // Aktualisiere Status basierend auf Akzeptanzen
-        if (user1Accepted && user2Accepted) {
+        // Aktualisiere Status basierend auf Aktionen
+        // Wenn eine Seite ablehnt, ist das Match abgelehnt
+        if (user1Rejected || user2Rejected) {
+            this.status = "REJECTED";
+        } else if (user1Accepted && user2Accepted) {
             this.status = "ACCEPTED";
-        } else if (!user1Accepted || !user2Accepted) {
+        } else {
+            this.status = "PENDING";
+        }
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+        if (this.updatedAt == null) {
+            this.updatedAt = LocalDateTime.now();
+        }
+
+        // Setze Status basierend auf Aktionen beim Erstellen
+        if (user1Rejected || user2Rejected) {
+            this.status = "REJECTED";
+        } else if (user1Accepted && user2Accepted) {
+            this.status = "ACCEPTED";
+        } else {
             this.status = "PENDING";
         }
     }
 }
-
