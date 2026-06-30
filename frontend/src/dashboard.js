@@ -2,6 +2,8 @@
  * Dashboard Module - Hauptseite nach dem Login
  */
 
+import { escapeHtml } from './utils.js';
+
 class DashboardModule {
     constructor(app) {
         this.app = app;
@@ -37,15 +39,15 @@ class DashboardModule {
                 <!-- Header Section -->
                 <div class="dashboard-header">
                     <div class="welcome-section">
-                        <h2>Willkommen, ${user.username}! 👋</h2>
+                        <h2>Willkommen, ${escapeHtml(user.username)}</h2>
                         <p class="subtitle">Finde Lernpartner und verbessere dich zusammen</p>
                     </div>
                     <div class="header-actions">
                         <button class="btn btn-secondary" onclick="app.showProfile()" title="Profil bearbeiten">
-                            ⚙️ Profil
+                            Profil
                         </button>
                         <button class="btn btn-secondary" onclick="app.logout()" title="Abmelden">
-                            🚪 Logout
+                            Logout
                         </button>
                     </div>
                 </div>
@@ -53,18 +55,12 @@ class DashboardModule {
                 <!-- Quick Stats -->
                 <div class="stats-section">
                     <div class="stat-card">
-                        <div class="stat-icon">🤝</div>
-                        <div class="stat-content">
-                            <div class="stat-number" id="statMatches">0</div>
-                            <div class="stat-label">Lernpartner</div>
-                        </div>
+                        <div class="stat-number" id="statMatches">0</div>
+                        <div class="stat-label">Lernpartner</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon">👤</div>
-                        <div class="stat-content">
-                            <div class="stat-number" id="statProfile">✓</div>
-                            <div class="stat-label">Profil-Status</div>
-                        </div>
+                        <div class="stat-number" id="statProfile">–</div>
+                        <div class="stat-label">Profil-Status</div>
                     </div>
                 </div>
 
@@ -72,7 +68,7 @@ class DashboardModule {
                 <div class="dashboard-content">
                     <!-- Matching Section -->
                     <div class="section matching-section">
-                        <h3>🎯 Finde Lernpartner</h3>
+                        <h3>Finde Lernpartner</h3>
                         <p class="section-subtitle">Entdecke passende Lernpartner basierend auf deinen Interessen</p>
                         <div id="matchSuggestionCard" class="match-suggestion-container">
                             <div class="loading">Laden...</div>
@@ -81,7 +77,7 @@ class DashboardModule {
 
                     <!-- Accepted Matches Section -->
                     <div class="section matches-section">
-                        <h3>🤝 Deine Lernpartner</h3>
+                        <h3>Deine Lernpartner</h3>
                         <p class="section-subtitle">Deine bestätigten Lernpartner-Verbindungen</p>
                         <div id="acceptedMatchesList" class="matches-list">
                             <p class="loading">Laden...</p>
@@ -108,13 +104,13 @@ class DashboardModule {
                 const profileResponse = await this.app.ApiService.getProfile(this.app.currentUser.userId);
 
                 if (profileResponse.success) {
-                    document.getElementById('statProfile').textContent = '✓';
+                    document.getElementById('statProfile').textContent = 'Vollständig';
                 } else {
-                    document.getElementById('statProfile').textContent = '✗';
+                    document.getElementById('statProfile').textContent = 'Unvollständig';
                 }
             } catch (e) {
-                // 👇 WICHTIG: 404 abfangen
-                document.getElementById('statProfile').textContent = '✗';
+                // 404 abfangen: Profil existiert noch nicht
+                document.getElementById('statProfile').textContent = 'Unvollständig';
             }
 
         } catch (error) {
