@@ -9,7 +9,7 @@ import com.studybuddy.repository.MatchRepository;
 import com.studybuddy.repository.ProfileRepository;
 import com.studybuddy.repository.RejectedMatchRepository;
 import com.studybuddy.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,27 +21,22 @@ import java.util.stream.Collectors;
  */
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class MatchService {
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private ProfileRepository profileRepository;
-
-    @Autowired
-    private MatchRepository matchRepository;
-
-    @Autowired
-    private RejectedMatchRepository rejectedMatchRepository;
+    private final UserRepository userRepository;
+    private final ProfileRepository profileRepository;
+    private final MatchRepository matchRepository;
+    private final RejectedMatchRepository rejectedMatchRepository;
 
     /**
      * Generiere Match-Vorschläge für einen Nutzer
      * basierend auf Kompatibilität mit anderen Nutzern
      */
     public List<MatchSuggestionDTO> generateMatchSuggestions(Long userId) {
-        User currentUser = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Nutzer nicht gefunden"));
+        if (!userRepository.existsById(userId)) {
+            throw new IllegalArgumentException("Nutzer nicht gefunden");
+        }
 
         Profile currentProfile = profileRepository.findByUserId(userId)
                 .orElse(null);
@@ -142,51 +137,37 @@ public class MatchService {
      */
     public Map<String, Object> acceptMatch(Long userId, Long suggestedUserId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Nutzer nicht gefunden"));
+                .orElseThrow(() -> new IllegalArgumentException("Nutzer nicht gefunden"));
         User suggestedUser = userRepository.findById(suggestedUserId)
-                .orElseThrow(() -> new RuntimeException("Vorgeschlagener Nutzer nicht gefunden"));
+                .orElseThrow(() -> new IllegalArgumentException("Vorgeschlagener Nutzer nicht gefunden"));
 
-        // Prüfe ob bereits ein Match existiert
-        Optional<Match> existingMatch = matchRepository.findMatchBetweenUsers(userId, suggestedUserId);
+        // Prüfe ob bereits ein Match existiert, sonst neu anlegen
+        Match match = matchRepository.findMatchBetweenUsers(userId, suggestedUserId)
+                .orElseGet(() -> Match.builder()
+                        .user1(user)
+                        .user2(suggestedUser)
+                        .build());
 
-        if (existingMatch.isPresent()) {
-            Match match = existingMatch.get();
-
-            // Aktualisiere akzeptiert-Status basierend auf aktuellen Nutzer
-            if (match.getUser1().getId().equals(userId)) {
-                match.setUser1Accepted(true);
-            } else {
-                match.setUser2Accepted(true);
-            }
-
-            matchRepository.save(match);
-
-            return Map.of(
-                    "success", true,
-                    "message", match.getStatus().equals("ACCEPTED") ?
-                               "Match akzeptiert! Ihr seid jetzt Lernpartner!" :
-                               "Anfrage gesendet. Warte auf Bestätigung...",
-                    "matchId", match.getId(),
-                    "status", match.getStatus()
-            );
+        // Akzeptiert-Status für den aktuellen Nutzer setzen
+        if (match.getUser2() != null && match.getUser2().getId().equals(userId)) {
+            match.setUser2Accepted(true);
         } else {
-            // Erstelle neuen Match
-            Match newMatch = Match.builder()
-                    .user1(user)
-                    .user2(suggestedUser)
-                    .user1Accepted(true)
-                    .status("PENDING")
-                    .build();
-
-            Match savedMatch = matchRepository.save(newMatch);
-
-            return Map.of(
-                    "success", true,
-                    "message", "Anfrage gesendet. Warte auf Bestätigung...",
-                    "matchId", savedMatch.getId(),
-                    "status", savedMatch.getStatus()
-            );
+            match.setUser1Accepted(true);
         }
+
+        // saveAndFlush -> @PrePersist/@PreUpdate berechnet den Status sofort,
+        // damit getStatus() hier den aktuellen Wert liefert.
+        Match savedMatch = matchRepository.saveAndFlush(match);
+        boolean accepted = "ACCEPTED".equals(savedMatch.getStatus());
+
+        return Map.of(
+                "success", true,
+                "message", accepted
+                        ? "Match akzeptiert! Ihr seid jetzt Lernpartner!"
+                        : "Anfrage gesendet. Warte auf Bestätigung...",
+                "matchId", savedMatch.getId(),
+                "status", savedMatch.getStatus()
+        );
     }
 
     /**
@@ -194,9 +175,9 @@ public class MatchService {
      */
     public Map<String, Object> rejectMatch(Long userId, Long suggestedUserId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Nutzer nicht gefunden"));
+                .orElseThrow(() -> new IllegalArgumentException("Nutzer nicht gefunden"));
         User suggestedUser = userRepository.findById(suggestedUserId)
-                .orElseThrow(() -> new RuntimeException("Vorgeschlagener Nutzer nicht gefunden"));
+                .orElseThrow(() -> new IllegalArgumentException("Vorgeschlagener Nutzer nicht gefunden"));
 
         // Prüfe ob bereits ein Match existiert
         Optional<Match> existingMatch = matchRepository.findMatchBetweenUsers(userId, suggestedUserId);
@@ -247,7 +228,7 @@ public class MatchService {
                         "username", otherUser.getUsername(),
                         "firstName", otherProfile.getFirstName(),
                         "lastName", otherProfile.getLastName(),
-                        "bio", otherProfile.getSubjects() != null ? otherProfile.getSubjects() : "",
+                        "subjects", otherProfile.getSubjects() != null ? otherProfile.getSubjects() : "",
                         "schoolOrUniversity", otherProfile.getSchoolOrUniversity() != null ?
                                             otherProfile.getSchoolOrUniversity() : "",
                         "matchId", match.getId()
@@ -271,7 +252,7 @@ public class MatchService {
      */
     public void createInitialMatchesForNewProfile(Long newUserId) {
         User newUser = userRepository.findById(newUserId)
-                .orElseThrow(() -> new RuntimeException("Benutzer nicht gefunden"));
+                .orElseThrow(() -> new IllegalArgumentException("Benutzer nicht gefunden"));
 
         // ✅ WICHTIG: Hole NUR Benutzer die AUCH ein PROFIL haben!
         List<User> existingUsers = userRepository.findAll().stream()

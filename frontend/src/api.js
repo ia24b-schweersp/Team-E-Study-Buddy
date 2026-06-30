@@ -1,6 +1,7 @@
 // API Service für Backend-Kommunikation
 
-const API_BASE_URL = 'http://localhost:8080/api';
+// Basis-URL kann über die Vite-Umgebungsvariable VITE_API_BASE_URL überschrieben werden.
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/api`;
 const REQUEST_TIMEOUT = 10000; // 10 seconds
 
 class ApiService {
@@ -48,6 +49,13 @@ class ApiService {
             console.error(`API Error [${endpoint}]:`, error);
             throw error;
         }
+    }
+
+    /**
+     * Health-Check: prüft, ob das Backend erreichbar ist.
+     */
+    static async checkHealth() {
+        return this.request('/health', { method: 'GET' });
     }
 
     /**

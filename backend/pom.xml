@@ -16,12 +16,14 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.1.5</version>
+        <version>3.3.5</version>
         <relativePath/>
     </parent>
 
     <properties>
         <java.version>17</java.version>
+        <!-- Pin a Lombok version that supports recent JDKs (e.g. Java 21/23) -->
+        <lombok.version>1.18.36</lombok.version>
     </properties>
 
     <dependencies>
@@ -48,6 +50,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Password hashing (BCrypt) without the full web-security filter chain -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
         <!-- Lombok for reducing boilerplate -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -65,10 +73,28 @@
 
     <build>
         <plugins>
+            <!--
+                Lombok muss explizit als Annotation-Processor registriert werden.
+                Seit JDK 23 führt javac keine Prozessoren mehr aus, die nur auf dem
+                Classpath liegen, daher der annotationProcessorPaths-Eintrag.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>3.1.5</version>
                 <configuration>
                     <excludes>
                         <exclude>

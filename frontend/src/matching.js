@@ -2,6 +2,8 @@
  * Matching Module - Verwaltet Match-Vorschläge und Lernpartner-Verbindungen
  */
 
+import { escapeHtml } from './utils.js';
+
 class MatchingModule {
     constructor(app) {
         this.app = app;
@@ -52,7 +54,7 @@ class MatchingModule {
         if (this.suggestions.length === 0) {
             container.innerHTML = `
                 <div class="suggestion-empty">
-                    <p>😊 Keine Vorschläge verfügbar</p>
+                    <p>Keine Vorschläge verfügbar</p>
                     <small>Aktualisiere später, um neue Lernpartner zu finden</small>
                 </div>
             `;
@@ -62,7 +64,7 @@ class MatchingModule {
         if (this.currentSuggestionIndex >= this.suggestions.length) {
             container.innerHTML = `
                 <div class="suggestion-empty">
-                    <p>🎉 Alle Vorschläge angesehen!</p>
+                    <p>Alle Vorschläge angesehen</p>
                     <button class="btn btn-secondary" onclick="window.matchingModule.loadSuggestions()">Neu laden</button>
                 </div>
             `;
@@ -70,33 +72,33 @@ class MatchingModule {
         }
 
         const suggestion = this.suggestions[this.currentSuggestionIndex];
-        const compatibilityEmoji = this.getCompatibilityEmoji(suggestion.compatibilityScore);
+        const level = this.getCompatibilityLevel(suggestion.compatibilityScore);
 
         container.innerHTML = `
             <div class="suggestion-card">
                 <div class="suggestion-header">
-                    <h3>${suggestion.firstName} ${suggestion.lastName}</h3>
-                    <div class="compatibility-badge">
-                        ${compatibilityEmoji} ${suggestion.compatibilityScore}%
+                    <h3>${escapeHtml(suggestion.firstName)} ${escapeHtml(suggestion.lastName)}</h3>
+                    <div class="compatibility-badge compatibility-${level}">
+                        ${suggestion.compatibilityScore}% Übereinstimmung
                     </div>
                 </div>
 
                 <div class="suggestion-content">
-                    <p><strong>👤 Benutzername:</strong> ${suggestion.username}</p>
+                    <p><strong>Benutzername</strong><span>${escapeHtml(suggestion.username)}</span></p>
 
                     ${suggestion.schoolOrUniversity ?
-            `<p><strong>🏫 Schule:</strong> ${suggestion.schoolOrUniversity}</p>` : ''}
+            `<p><strong>Schule</strong><span>${escapeHtml(suggestion.schoolOrUniversity)}</span></p>` : ''}
 
                     ${suggestion.subjects ?
-            `<p><strong>📚 Fächer:</strong> ${this.formatSubjects(suggestion.subjects)}</p>` : ''}
+            `<p><strong>Fächer</strong><span>${escapeHtml(this.formatSubjects(suggestion.subjects))}</span></p>` : ''}
                 </div>
 
                 <div class="suggestion-actions">
                     <button class="btn btn-success" onclick="window.matchingModule.acceptSuggestion(${suggestion.userId})">
-                        ✓ Akzeptieren
+                        Akzeptieren
                     </button>
                     <button class="btn btn-danger" onclick="window.matchingModule.rejectSuggestion(${suggestion.userId})">
-                        ✗ Ablehnen
+                        Ablehnen
                     </button>
                 </div>
 
@@ -108,13 +110,12 @@ class MatchingModule {
     }
 
     /**
-     * Bestimme Emoji basierend auf Kompatibilität
+     * Bestimme Kompatibilitäts-Stufe (für die Badge-Farbe).
      */
-    getCompatibilityEmoji(score) {
-        if (score >= 80) return '💚';
-        if (score >= 60) return '💛';
-        if (score >= 40) return '🧡';
-        return '💙';
+    getCompatibilityLevel(score) {
+        if (score >= 80) return 'high';
+        if (score >= 60) return 'medium';
+        return 'low';
     }
 
     /**
@@ -163,8 +164,6 @@ class MatchingModule {
                 this.app.showMessage('Vorschlag abgelehnt', 'info');
                 this.currentSuggestionIndex++;
                 this.renderSuggestion();
-
-                await this.loadSuggestions();
             } else {
                 this.app.showMessage(response.message || 'Fehler beim Ablehnen', 'error');
             }
@@ -209,14 +208,14 @@ class MatchingModule {
         this.acceptedMatches.forEach(match => {
             html += `
                 <div class="match-card">
-                    <h4>${match.firstName} ${match.lastName}</h4>
-                    <p><strong>👤:</strong> ${match.username}</p>
+                    <h4>${escapeHtml(match.firstName)} ${escapeHtml(match.lastName)}</h4>
+                    <p><strong>Benutzername</strong><span>${escapeHtml(match.username)}</span></p>
 
                     ${match.schoolOrUniversity ?
-                `<p><strong>🏫:</strong> ${match.schoolOrUniversity}</p>` : ''}
+                `<p><strong>Schule</strong><span>${escapeHtml(match.schoolOrUniversity)}</span></p>` : ''}
 
                     ${match.subjects ?
-                `<p><strong>📚:</strong> ${this.formatSubjects(match.subjects)}</p>` : ''}
+                `<p><strong>Fächer</strong><span>${escapeHtml(this.formatSubjects(match.subjects))}</span></p>` : ''}
                 </div>
             `;
         });

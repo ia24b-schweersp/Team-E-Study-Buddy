@@ -7,6 +7,7 @@ import com.studybuddy.model.User;
 import com.studybuddy.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,9 +20,11 @@ import java.util.Optional;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public AuthResponse register(RegisterRequest request) {
-        log.info("Registrierungsanfrage für Email: {}", request.getEmail());
+        String email = normalizeEmail(request.getEmail());
+        log.info("Registrierungsanfrage für Email: {}", email);
 
         // Validierung
         if (!request.getPassword().equals(request.getConfirmPassword())) {
@@ -32,18 +35,18 @@ public class AuthService {
         }
 
         // Prüfe, ob Email bereits existiert
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(email)) {
             return AuthResponse.builder()
                     .success(false)
                     .message("Email existiert bereits")
                     .build();
         }
 
-        // Benutzer erstellen
+        // Benutzer erstellen (Passwort wird gehasht gespeichert)
         User user = User.builder()
-                .email(request.getEmail())
-                .username(request.getUsername())
-                .password(request.getPassword()) // In Produktion: Hashing verwenden!
+                .email(email)
+                .username(request.getUsername().trim())
+                .password(passwordEncoder.encode(request.getPassword()))
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -59,11 +62,15 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        log.info("Login-Anfrage für Email: {}", request.getEmail());
+        String email = normalizeEmail(request.getEmail());
+        log.info("Login-Anfrage für Email: {}", email);
 
-        Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
+        Optional<User> userOptional = userRepository.findByEmail(email);
 
-        if (userOptional.isEmpty()) {
+        // Gleiche Fehlermeldung für unbekannte Email und falsches Passwort,
+        // damit keine Rückschlüsse auf existierende Konten möglich sind.
+        if (userOptional.isEmpty()
+                || !passwordEncoder.matches(request.getPassword(), userOptional.get().getPassword())) {
             return AuthResponse.builder()
                     .success(false)
                     .message("Email oder Passwort ist ungültig")
@@ -71,15 +78,6 @@ public class AuthService {
         }
 
         User user = userOptional.get();
-
-        // Einfache Passwort-Verifikation (In Produktion: BCrypt verwenden!)
-        if (!user.getPassword().equals(request.getPassword())) {
-            return AuthResponse.builder()
-                    .success(false)
-                    .message("Email oder Passwort ist ungültig")
-                    .build();
-        }
-
         log.info("Login erfolgreich für Benutzer: {}", user.getId());
 
         return AuthResponse.builder()
@@ -89,6 +87,10 @@ public class AuthService {
                 .message("Login erfolgreich")
                 .success(true)
                 .build();
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
     }
 }
 

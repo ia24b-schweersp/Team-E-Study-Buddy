@@ -1,7 +1,6 @@
 package com.studybuddy.repository;
 
 import com.studybuddy.model.Match;
-import com.studybuddy.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,20 +13,14 @@ import java.util.Optional;
 public interface MatchRepository extends JpaRepository<Match, Long> {
 
     /**
-     * Finde alle Matches für einen Nutzer (egal ob user1 oder user2) - ACCEPTED ONLY
+     * Finde alle akzeptierten Matches für einen Nutzer (egal ob user1 oder user2).
      */
     @Query("SELECT m FROM Match m WHERE (m.user1.id = :userId OR m.user2.id = :userId) AND m.status = 'ACCEPTED'")
     List<Match> findAcceptedMatchesByUserId(@Param("userId") Long userId);
 
     /**
-     * ✅ Finde alle AKTIVEN Matches für einen Nutzer (ACCEPTED oder PENDING)
-     */
-    @Query("SELECT m FROM Match m WHERE (m.user1.id = :userId OR m.user2.id = :userId) AND m.status IN ('ACCEPTED', 'PENDING') ORDER BY m.updatedAt DESC")
-    List<Match> findActiveMatchesByUserId(@Param("userId") Long userId);
-
-    /**
-     * ✅ Finde Matches wo der AKTUELLE NUTZER bereits agiert hat
-     * (akzeptiert oder abgelehnt)
+     * Finde ein Match, bei dem der aktuelle Nutzer mit dem anderen Nutzer
+     * bereits agiert hat (akzeptiert oder abgelehnt).
      */
     @Query("SELECT m FROM Match m WHERE " +
            "((m.user1.id = :userId AND (m.user1Accepted = true OR m.user1Rejected = true)) OR " +
@@ -36,27 +29,14 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
     Optional<Match> findMatchWhereCurrentUserActed(@Param("userId") Long userId, @Param("otherUserId") Long otherUserId);
 
     /**
-     * Finde ein Match zwischen zwei Nutzern
+     * Finde ein Match zwischen zwei Nutzern (unabhängig von der Reihenfolge).
      */
     @Query("SELECT m FROM Match m WHERE (m.user1.id = :userId1 AND m.user2.id = :userId2) OR (m.user1.id = :userId2 AND m.user2.id = :userId1)")
     Optional<Match> findMatchBetweenUsers(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
 
     /**
-     * Finde ein Match zwischen zwei Nutzern (nur ACCEPTED und PENDING)
-     */
-    @Query("SELECT m FROM Match m WHERE ((m.user1.id = :userId1 AND m.user2.id = :userId2) OR (m.user1.id = :userId2 AND m.user2.id = :userId1)) AND m.status IN ('PENDING', 'ACCEPTED')")
-    Optional<Match> findActiveBetweenUsers(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
-
-    /**
-     * Finde alle ausstehenden Matches für einen Nutzer
-     */
-    @Query("SELECT m FROM Match m WHERE (m.user1.id = :userId OR m.user2.id = :userId) AND m.status = 'PENDING'")
-    List<Match> findPendingMatchesByUserId(@Param("userId") Long userId);
-
-    /**
-     * Zähle alle Matches eines Nutzers
+     * Zähle alle akzeptierten Matches eines Nutzers.
      */
     @Query("SELECT COUNT(m) FROM Match m WHERE (m.user1.id = :userId OR m.user2.id = :userId) AND m.status = 'ACCEPTED'")
     long countAcceptedMatchesByUserId(@Param("userId") Long userId);
 }
-

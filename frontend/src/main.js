@@ -1,6 +1,7 @@
 import ApiService from './api.js';
 import MatchingModule from './matching.js';
 import DashboardModule from './dashboard.js';
+import { escapeHtml } from './utils.js';
 
 class App {
     constructor() {
@@ -40,13 +41,10 @@ class App {
      */
     async checkBackendConnection() {
         try {
-            const response = await fetch('http://localhost:8080/api/auth/login', {
-                method: 'POST',
-                timeout: 5000
-            });
+            await ApiService.checkHealth();
         } catch (error) {
             console.warn('Backend möglicherweise nicht erreichbar:', error);
-            this.showMessage('⚠️ Backend nicht erreichbar. Bitte stelle sicher, dass der Server läuft.', 'error');
+            this.showMessage('Backend nicht erreichbar. Bitte stelle sicher, dass der Server läuft.', 'error');
         }
     }
 
@@ -134,11 +132,11 @@ class App {
                 <li><a href="#" onclick="app.showDashboard(); return false;">Dashboard</a></li>
                 <li>
                     <a href="#" onclick="app.showMatching(); return false;">
-                        🤝 Matches
+                        Matches
                         <span id="matchCountBadge" class="nav-badge" style="display: none;">0</span>
                     </a>
                 </li>
-                <li><span class="username">👤 ${this.currentUser.username}</span></li>
+                <li><span class="username">${escapeHtml(this.currentUser.username)}</span></li>
                 <li><a href="#" onclick="app.logout(); return false;">Logout</a></li>
             `;
 
@@ -249,13 +247,12 @@ class App {
 
         const form = e.target;
         const profileData = {
-            firstName: form.elements['firstName'].value,
-            lastName: form.elements['lastName'].value,
-            subjects: Array.from(
-                document.querySelectorAll('.subject-btn.selected')
-            ).map(button => button.textContent)
-                .join(","),
-            schoolOrUniversity: form.elements['schoolOrUniversity'].value
+            firstName: form.elements['firstName'].value.trim(),
+            lastName: form.elements['lastName'].value.trim(),
+            subjects: Array.from(document.querySelectorAll('.subject-btn.selected'))
+                .map(button => button.textContent.trim())
+                .join(','),
+            schoolOrUniversity: form.elements['schoolOrUniversity'].value.trim()
         };
 
         try {
@@ -283,17 +280,18 @@ class App {
             if (response.success) {
                 document.getElementById('profileFirstName').value = response.firstName || '';
                 document.getElementById('profileLastName').value = response.lastName || '';
-                document.querySelectorAll('.subject-btn').forEach(btn => {
-                    btn.classList.remove('selected');
-                });
+                const subjectButtons = document.querySelectorAll('.subject-btn');
+                subjectButtons.forEach(btn => btn.classList.remove('selected'));
 
+                // subjects ist ein kommagetrennter String, z. B. "Mathematik,Englisch"
                 if (response.subjects) {
-                    response.subjects.forEach(subject => {
-                        document.querySelectorAll('.subject-btn').forEach(btn => {
-                            if (btn.textContent === subject) {
-                                btn.classList.add('selected');
-                            }
-                        });
+                    const selectedSubjects = response.subjects
+                        .split(',')
+                        .map(s => s.trim());
+                    subjectButtons.forEach(btn => {
+                        if (selectedSubjects.includes(btn.textContent.trim())) {
+                            btn.classList.add('selected');
+                        }
                     });
                 }
                 document.getElementById('profileSchool').value = response.schoolOrUniversity || '';
