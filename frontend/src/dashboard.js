@@ -99,17 +99,24 @@ class DashboardModule {
         if (!this.app.currentUser) return;
 
         try {
-            // Aktualisiere Match-Zähler
             const matchResponse = await this.app.ApiService.countMatches(this.app.currentUser.userId);
             if (matchResponse.success) {
                 document.getElementById('statMatches').textContent = matchResponse.count;
             }
 
-            // Prüfe Profil-Status
-            const profileResponse = await this.app.ApiService.getProfile(this.app.currentUser.userId);
-            if (profileResponse.success) {
-                document.getElementById('statProfile').textContent = '✓';
+            try {
+                const profileResponse = await this.app.ApiService.getProfile(this.app.currentUser.userId);
+
+                if (profileResponse.success) {
+                    document.getElementById('statProfile').textContent = '✓';
+                } else {
+                    document.getElementById('statProfile').textContent = '✗';
+                }
+            } catch (e) {
+                // 👇 WICHTIG: 404 abfangen
+                document.getElementById('statProfile').textContent = '✗';
             }
+
         } catch (error) {
             console.error('Fehler beim Aktualisieren der Statistiken:', error);
         }

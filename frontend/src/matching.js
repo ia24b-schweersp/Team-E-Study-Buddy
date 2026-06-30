@@ -32,6 +32,17 @@ class MatchingModule {
     }
 
     /**
+     * Hilfsfunktion: Subjects formatieren
+     */
+    formatSubjects(subjects) {
+        if (!subjects) return '';
+        return subjects
+            .split(',')
+            .map(s => s.trim())
+            .join(', ');
+    }
+
+    /**
      * Rendere aktuellen Match-Vorschlag
      */
     renderSuggestion() {
@@ -69,13 +80,17 @@ class MatchingModule {
                         ${compatibilityEmoji} ${suggestion.compatibilityScore}%
                     </div>
                 </div>
+
                 <div class="suggestion-content">
                     <p><strong>👤 Benutzername:</strong> ${suggestion.username}</p>
-                    ${suggestion.schoolOrUniversity ? 
-                        `<p><strong>🏫 Schule:</strong> ${suggestion.schoolOrUniversity}</p>` : ''}
-                    ${suggestion.bio ? 
-                        `<p><strong>📝 Bio:</strong> ${suggestion.bio}</p>` : ''}
+
+                    ${suggestion.schoolOrUniversity ?
+            `<p><strong>🏫 Schule:</strong> ${suggestion.schoolOrUniversity}</p>` : ''}
+
+                    ${suggestion.subjects ?
+            `<p><strong>📚 Fächer:</strong> ${this.formatSubjects(suggestion.subjects)}</p>` : ''}
                 </div>
+
                 <div class="suggestion-actions">
                     <button class="btn btn-success" onclick="window.matchingModule.acceptSuggestion(${suggestion.userId})">
                         ✓ Akzeptieren
@@ -84,6 +99,7 @@ class MatchingModule {
                         ✗ Ablehnen
                     </button>
                 </div>
+
                 <div class="suggestion-counter">
                     ${this.currentSuggestionIndex + 1} / ${this.suggestions.length}
                 </div>
@@ -117,6 +133,12 @@ class MatchingModule {
                 this.app.showMessage(response.message, 'success');
                 this.currentSuggestionIndex++;
                 this.renderSuggestion();
+
+                await this.loadAcceptedMatches();
+
+                if (this.app.dashboardModule) {
+                    await this.app.dashboardModule.updateStats();
+                }
             } else {
                 this.app.showMessage(response.message || 'Fehler beim Akzeptieren', 'error');
             }
@@ -141,6 +163,8 @@ class MatchingModule {
                 this.app.showMessage('Vorschlag abgelehnt', 'info');
                 this.currentSuggestionIndex++;
                 this.renderSuggestion();
+
+                await this.loadSuggestions();
             } else {
                 this.app.showMessage(response.message || 'Fehler beim Ablehnen', 'error');
             }
@@ -187,8 +211,12 @@ class MatchingModule {
                 <div class="match-card">
                     <h4>${match.firstName} ${match.lastName}</h4>
                     <p><strong>👤:</strong> ${match.username}</p>
-                    ${match.schoolOrUniversity ? `<p><strong>🏫:</strong> ${match.schoolOrUniversity}</p>` : ''}
-                    ${match.bio ? `<p><strong>📝:</strong> ${match.bio}</p>` : ''}
+
+                    ${match.schoolOrUniversity ?
+                `<p><strong>🏫:</strong> ${match.schoolOrUniversity}</p>` : ''}
+
+                    ${match.subjects ?
+                `<p><strong>📚:</strong> ${this.formatSubjects(match.subjects)}</p>` : ''}
                 </div>
             `;
         });
@@ -219,4 +247,3 @@ class MatchingModule {
 }
 
 export default MatchingModule;
-

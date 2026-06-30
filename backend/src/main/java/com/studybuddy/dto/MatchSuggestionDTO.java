@@ -17,7 +17,7 @@ public class MatchSuggestionDTO {
     private String username;
     private String firstName;
     private String lastName;
-    private String bio;
+    private String subjects;
     private String schoolOrUniversity;
     private int compatibilityScore; // Kompatibilitätsscore 0-100
 }
