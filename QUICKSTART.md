@@ -46,6 +46,8 @@ VITE v5.0.0 ready in XXX ms
 
 ### Test-Szenario:
 
+
+
 1. **Registrierung:**
    - Benutzername: `testuser`
    - Email: `test@example.com`
